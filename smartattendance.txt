@@ -1,0 +1,77 @@
+#include <SPI.h>
+#include <MFRC522.h>
+#include <Wire.h>
+#include <LiquidCrystal_I2C.h>
+
+const int buzzerPin = 8;
+LiquidCrystal_I2C lcd(0x27, 16, 2);
+MFRC522 mfrc522(10, 9);
+String vikas = "13D6B21A";
+String bhoomika = "235BF41A";  // Updated UID for Bhoomika
+String hithesh = "63935BC9";    // Updated UID for Hithesh
+bool vikasLoggedIn = false;
+bool bhoomikaLoggedIn = false;  // Updated flag for Bhoomika
+bool hitheshLoggedIn = false;   // Updated flag for Hithesh
+int totalcount = 0;
+
+void setup() {
+  lcd.begin(16, 2);
+  lcd.backlight();
+  lcd.clear();
+  Serial.begin(9600);
+  SPI.begin();
+  mfrc522.PCD_Init();
+  pinMode(buzzerPin, OUTPUT);
+  Serial.println("Initializing...");
+}
+
+void loop() {
+  if (mfrc522.PICC_IsNewCardPresent()) {
+    if (mfrc522.PICC_ReadCardSerial()) {
+      String cardUID = "";
+      for (byte i = 0; i < mfrc522.uid.size; i++) {
+        cardUID += String(mfrc522.uid.uidByte[i], HEX);
+      }
+      cardUID.toUpperCase();
+      
+      if (cardUID == vikas) {
+        handleCardEvent("Vikas sj", vikasLoggedIn);
+      } else if (cardUID == bhoomika) {
+        handleCardEvent("Bhoomika", bhoomikaLoggedIn);
+      } else if (cardUID == hithesh) {
+        handleCardEvent("Hithesh", hitheshLoggedIn);
+      } else {
+        lcd.clear();
+        lcd.setCursor(0, 0);
+        lcd.print("Access Denied");
+        delay(2000);
+        Serial.println("Access Denied for UID: " + cardUID);
+      }
+
+      lcd.setCursor(0, 1);
+      lcd.print("Total Count: " + String(totalcount));
+
+      tone(buzzerPin, 1000, 100);
+
+      delay(3000);
+    }
+  }
+}
+
+void handleCardEvent(String cardName, bool &loggedInFlag) {
+  if (!loggedInFlag) {
+    lcd.clear();
+    lcd.setCursor(0, 0);
+    lcd.print(cardName + " Logged In");
+    loggedInFlag = true;
+    totalcount++;
+    Serial.println(cardName + " Logged In");
+  } else {
+    lcd.clear();
+    lcd.setCursor(0, 0);
+    lcd.print(cardName + " Logged Out");
+    loggedInFlag = false;
+    totalcount--;
+    Serial.println(cardName + " Logged Out");
+  }
+}
